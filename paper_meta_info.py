@@ -94,33 +94,30 @@ class PaperMetaInfo(object):
                 break
 
         # Title
-        # results = [r for r in results if r['width'] > self.min_width]
-        # abst_line_no = self.find_abstract_line(results)  # Abstractの行をサーチ
-        # max_line_no = abst_line_no if abst_line_no >= 0 else int(len(results) * TITLE_BOTTOM_RATIO)
-        # results_for_title = [r for i, r in enumerate(results) if i < max_line_no]
-        results_for_title = [r for r in results if r['width'] > self.min_width]
-        abst_line_no = self.find_abstract_line(results_for_title)  # Abstractの行をサーチ
-        max_line_no = abst_line_no if abst_line_no >= 0 else int(len(results_for_title) * TITLE_BOTTOM_RATIO)
-        results_for_title = [r for i, r in enumerate(results_for_title) if i < max_line_no]
+        title_candidates = [r for r in results if r['width'] > self.min_width]
+        abst_line_no = self.find_abstract_line(title_candidates)  # Abstractの行をサーチ
+        max_line_no = abst_line_no if abst_line_no >= 0 else int(len(title_candidates) * TITLE_BOTTOM_RATIO)
+        title_candidates = [r for i, r in enumerate(title_candidates) if i < max_line_no]
 
         # 著者情報で含む文字がある場合は除外
-        results_for_title = [r for r in results_for_title if not self.check_character_in_word(r['text'], SKIP_CHARACTERS)]
+        title_candidates = [r for r in title_candidates if not self.check_character_in_word(r['text'], SKIP_CHARACTERS)]
 
         # 著者情報っぽい行は除外
-        results_for_title = [r for r in results_for_title if not self.find_author_like_word(r['text'])]
+        title_candidates = [r for r in title_candidates if not self.find_author_like_word(r['text'])]
 
         # 特定文字列を除外
-        results_for_title = [r for r in results_for_title if r['text'].strip() not in EXCLUDE_WORDS]
+        title_candidates = [r for r in title_candidates if r['text'].strip() not in EXCLUDE_WORDS]
 
-        max_pos = np.argmax([r['height'] for r in results_for_title])
-        max_height = results_for_title[max_pos]['height']
-        title_lines = [results_for_title[max_pos]['text'].strip()]
-        for pos in range(max_pos+1, min(max_pos+TITLE_MAX_LINES+1, len(results_for_title))):
-            if results_for_title[pos]['height'] == max_height:
-                title_lines.append(results_for_title[pos]['text'].strip())
+        max_pos = np.argmax([r['height'] for r in title_candidates])
+        max_height = title_candidates[max_pos]['height']
+        title_lines = [title_candidates[max_pos]['text'].strip()]
+        for pos in range(max_pos+1, min(max_pos+TITLE_MAX_LINES+1, len(title_candidates))):
+            if title_candidates[pos]['height'] == max_height:
+                title_lines.append(title_candidates[pos]['text'].strip())
         title = ' '.join(title_lines)
         # print(title)
 
+        # 抽出したタイトル行の前後に連結する情報があるかをチェック
         start_line = [i for i, r in enumerate(results) if r['text'].strip() == title_lines[0]][0]
         end_line = [i for i, r in enumerate(results) if r['text'].strip() == title_lines[-1]][0]
         if (title[-1] in ("-", ":")) and (end_line < len(results) - 1):
@@ -128,11 +125,11 @@ class PaperMetaInfo(object):
             r = results[end_line+1]
             if r['upper_space'] < TITLE_CONNECTING_SPACE and r['upper_space'] > 0:
                 title = title + " " + r['text'].strip()
-        elif (title[-1] in ("∗")) and start_line > 0:  # *ではない
+        elif (title[-1] in ("∗")) and max_pos > 0:  # *ではない
             # 直前をサーチする
             r = results[start_line]
             if r['upper_space'] < TITLE_CONNECTING_SPACE and r['upper_space'] > 0:
-                title = results_for_title[max_pos-1]['text'].strip() + " " + title
+                title = title_candidates[max_pos-1]['text'].strip() + " " + title
         elif end_line < len(results) - 1:
             # 直後をサーチする
             r = results[end_line+1]
@@ -141,28 +138,11 @@ class PaperMetaInfo(object):
                     title = title + " " + r['text'].strip()
                     title = title.rstrip()
 
-        # if (title[-1] in ("-", ":")) and (max_pos + len(title_lines) < len(results_for_title) - 1):
-        #     # 直後をサーチする
-        #     r = results_for_title[max_pos+(len(title_lines)-1)+1]
-        #     if r['upper_space'] < TITLE_CONNECTING_SPACE and r['upper_space'] > 0:
-        #         title = title + " " + r['text'].strip()
-        # elif (title[-1] in ("∗")) and max_pos > 0:  # *ではない
-        #     # 直前をサーチする
-        #     r = results_for_title[max_pos]
-        #     if r['upper_space'] < TITLE_CONNECTING_SPACE and r['upper_space'] > 0:
-        #         title = results_for_title[max_pos-1]['text'].strip() + " " + title
-        # elif max_pos + len(title_lines) < len(results_for_title) - 1:
-        #     # 直後をサーチする
-        #     r = results_for_title[max_pos+(len(title_lines)-1)+1]
-        #     if r['upper_space'] < TITLE_CONNECTING_SPACE and r['upper_space'] > 0:
-        #         title = title + " " + r['text'].strip()
-
         # Abstract
         in_abstract = False
         abstract_lines = []
         for r in results:
             if r['text'].replace(" ", "").lower().startswith('abstract'):
-                # print(r['text'])
                 in_abstract = True
 
             if in_abstract:

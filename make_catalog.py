@@ -18,7 +18,6 @@ def main():
             if filename.endswith(".pdf"):
                 filepath = os.path.join(args.document_root_dir, dirpath, filename)
                 file_list.append({'filename': filename, 'dirpath': dirpath, 'filepath': filepath})
-    # print(file_list)
     print(f"Found {len(file_list)} papers")
 
     print("Extracting title and abstract...")
@@ -28,7 +27,6 @@ def main():
         title, abstract = extractor.get_title_and_abstract(fileinfo['filepath'])
         fileinfo["title"] = title
         fileinfo["abstract"] = abstract
-        # break
 
     df = pd.DataFrame(file_list, columns=["filename", "dirpath", "title", "abstract", "filepath"])
     df.to_csv(args.output, index=False)
