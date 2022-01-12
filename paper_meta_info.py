@@ -54,6 +54,23 @@ class PaperMetaInfo(object):
         chk2 = re.search(r'[A-Z]{1}[a-z]+,\*{1,2}', word)
         return (chk1 is not None) or (chk2 is not None)
 
+    def find_vertical_abstract(self, results, cur_line_no):
+        if cur_line_no < 8:
+            return False
+        concat_word = ''.join([r['text'].strip() for r in results[cur_line_no-8:cur_line_no]]).lower()
+        if concat_word == "abstract":
+            return True
+        return False
+
+    def build_abstract_sentences(self, abstract_lines):
+        abstract = ' '.join(abstract_lines)
+        abstract = re.sub('^Abstract', '', abstract)
+        abstract = re.sub('^ABSTRACT', '', abstract)
+        abstract = re.sub('^A B S T R A C T', '', abstract)
+        abstract = re.sub('^a b s t r a c t', '', abstract)
+        abstract = abstract.lstrip("\u2014").lstrip(":").lstrip("-").lstrip(".").lstrip()
+        return abstract
+
     def get_title_and_abstract(self, filepath):
         with open(filepath, "rb") as f:
             parser = PDFParser(f)
@@ -152,13 +169,28 @@ class PaperMetaInfo(object):
                     break
                 abstract_lines.append(r['text'].strip())
 
-        abstract = ' '.join(abstract_lines)
-        abstract = re.sub('^Abstract', '', abstract)
-        abstract = re.sub('^ABSTRACT', '', abstract)
-        abstract = re.sub('^A B S T R A C T', '', abstract)
-        abstract = re.sub('^a b s t r a c t', '', abstract)
-        abstract = abstract.lstrip("\u2014").lstrip(":").lstrip("-").lstrip(".").lstrip()
+        abstract = self.build_abstract_sentences(abstract_lines)
         # print(abstract)
+
+        if abstract == '':
+            # 例外パターン1: 縦のabstract文字列を探す
+            start_abstract = False
+            in_abstract = False
+            for i, r in enumerate(results):
+                if not start_abstract and self.find_vertical_abstract(results, i):
+                    start_abstract = True
+                if start_abstract and not in_abstract and r['upper_space'] < -50:
+                    in_abstract = True
+                if in_abstract:
+                    # 1章まで
+                    if (r['text'].startswith('1') or r['text'].startswith('Introduction') or r['text'].startswith('I. ')) \
+                            and (r['width'] < INTRODUCTION_MAX_WIDTH):
+                        break
+                    abstract_lines.append(r['text'].strip())
+
+            if abstract_lines:
+                abstract = self.build_abstract_sentences(abstract_lines)
+
         return title, abstract
 
 
