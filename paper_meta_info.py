@@ -57,8 +57,17 @@ class PaperMetaInfo(object):
     def find_vertical_abstract(self, results, cur_line_no):
         if cur_line_no < 8:
             return False
-        concat_word = ''.join([r['text'].strip() for r in results[cur_line_no-8:cur_line_no]]).lower()
+        concat_word = ''.join([r['text'].strip() for r in results[cur_line_no-8+1:cur_line_no+1]]).lower()
         if concat_word == "abstract":
+            return True
+        return False
+
+    def find_2column_abstract(self, results, cur_line_no):
+        if cur_line_no < 3:
+            return False
+        concat_word3 = ''.join([r['text'].strip() for r in results[cur_line_no-3+1:cur_line_no+1]]).lower()
+        concat_word2 = ''.join([r['text'].strip() for r in results[cur_line_no-2+1:cur_line_no+1]]).lower()
+        if concat_word3 == 'abstract1introduction' or concat_word2 == 'abstract1. introduction':
             return True
         return False
 
@@ -174,6 +183,7 @@ class PaperMetaInfo(object):
 
         if abstract == '':
             # 例外パターン1: 縦のabstract文字列を探す
+            abstract_lines = []
             start_abstract = False
             in_abstract = False
             for i, r in enumerate(results):
@@ -185,6 +195,21 @@ class PaperMetaInfo(object):
                     # 1章まで
                     if (r['text'].startswith('1') or r['text'].startswith('Introduction') or r['text'].startswith('I. ')) \
                             and (r['width'] < INTRODUCTION_MAX_WIDTH):
+                        break
+                    abstract_lines.append(r['text'].strip())
+
+            if abstract_lines:
+                abstract = self.build_abstract_sentences(abstract_lines)
+
+        if abstract == '':
+            # 例外パターン2: 2カラム
+            abstract_lines = []
+            in_abstract = False
+            for i, r in enumerate(results):
+                if not in_abstract and self.find_2column_abstract(results, i):
+                    in_abstract = True
+                elif in_abstract:
+                    if r['upper_space'] < -100:
                         break
                     abstract_lines.append(r['text'].strip())
 
