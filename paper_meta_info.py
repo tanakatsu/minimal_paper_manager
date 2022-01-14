@@ -1,5 +1,6 @@
 import numpy as np
 import re
+from collections import Counter
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfpage import PDFPage
@@ -53,6 +54,13 @@ class PaperMetaInfo(object):
         chk1 = re.search(r'[A-Z]{1}[a-z]+[12][,\s]', word)
         chk2 = re.search(r'[A-Z]{1}[a-z]+,\*{1,2}', word)
         return (chk1 is not None) or (chk2 is not None)
+
+    def find_introduction_line(self, text, width):
+        if (text.startswith('1') or text.startswith('1 Introduction') or text.startswith('1. Introduction') or \
+                text.startswith('Introduction') or text.startswith('I. ')) and width < INTRODUCTION_MAX_WIDTH:
+            return True
+        else:
+            return False
 
     def find_vertical_abstract(self, results, cur_line_no):
         if cur_line_no < 8:
@@ -110,7 +118,7 @@ class PaperMetaInfo(object):
                     else:
                         r['aspect'] = r['width'] / r['height']
                     if last_bbox:
-                        r['upper_space'] = last_bbox[1] - box[3]
+                        r['upper_space'] = round(last_bbox[1] - box[3], 2)
                     else:
                         r['upper_space'] = -1
                     last_bbox = box
@@ -173,8 +181,7 @@ class PaperMetaInfo(object):
 
             if in_abstract:
                 # 1章まで
-                if (r['text'].startswith('1') or r['text'].startswith('Introduction') or r['text'].startswith('I. ')) \
-                        and (r['width'] < INTRODUCTION_MAX_WIDTH):
+                if self.find_introduction_line(r['text'], r['width']):
                     break
                 abstract_lines.append(r['text'].strip())
 
@@ -212,6 +219,48 @@ class PaperMetaInfo(object):
                     if r['upper_space'] < -100:
                         break
                     abstract_lines.append(r['text'].strip())
+
+            if abstract_lines:
+                abstract = self.build_abstract_sentences(abstract_lines)
+
+        if abstract == '':
+            # 例外パターン3: 明示的なAbstractなし
+            abstract_lines = []
+            title_line_no = -1
+            intro_line_no = -1
+            abstract_start_line_no = -1
+
+            # Title行を探す
+            for i, r in enumerate(results):
+                if r['text'].strip() == title_lines[0]:
+                    title_line_no = i
+                    break
+
+            # Introductionの行を探す
+            for i, r in enumerate(results):
+                if i < title_line_no:
+                    continue
+                if self.find_introduction_line(r['text'], r['width']) and r['width'] > MIN_WIDTH:
+                    intro_line_no = i
+                    break
+
+            if intro_line_no >= 0:
+                # Abstractっぽいheightを探す
+                heights_and_spaces = [(r['height'], r['upper_space']) for r in results[title_line_no+1:intro_line_no-1] if r['width'] > MIN_WIDTH]
+                target_height, target_space = Counter(heights_and_spaces).most_common()[0][0]
+                for i, r in enumerate(results):
+                    if i < title_line_no:
+                        continue
+                    if (r['height'] >= target_height - 1 and r['height'] <= target_height + 1) and \
+                            (r['upper_space'] >= target_space - 1 and r['upper_space'] <= target_space + 1):
+                        # ターゲットとなるheightとupper_spaceをもつ行をAbstractの行とみなす
+                        if abstract_start_line_no < 0:
+                            abstract_start_line_no = i
+                        abstract_lines.append(r['text'].strip())
+                    elif i == intro_line_no:
+                        # Abstractの先頭の行は検出できないので最後に追加する
+                        abstract_lines.insert(0, results[abstract_start_line_no-1]['text'].strip())
+                        break
 
             if abstract_lines:
                 abstract = self.build_abstract_sentences(abstract_lines)
