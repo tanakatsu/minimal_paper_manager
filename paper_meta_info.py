@@ -228,7 +228,7 @@ class PaperMetaInfo(object):
             abstract_lines = []
             title_line_no = -1
             intro_line_no = -1
-            abstract_start_line_no = -1
+            in_abstract = False
 
             # Title行を探す
             for i, r in enumerate(results):
@@ -251,16 +251,16 @@ class PaperMetaInfo(object):
                 for i, r in enumerate(results):
                     if i < title_line_no:
                         continue
-                    if (r['height'] >= target_height - 1 and r['height'] <= target_height + 1) and \
-                            (r['upper_space'] >= target_space - 1 and r['upper_space'] <= target_space + 1):
+                    if (not in_abstract) and (r['height'] == target_height) and (r['upper_space'] == target_space):
                         # ターゲットとなるheightとupper_spaceをもつ行をAbstractの行とみなす
-                        if abstract_start_line_no < 0:
-                            abstract_start_line_no = i
-                        abstract_lines.append(r['text'].strip())
-                    elif i == intro_line_no:
-                        # Abstractの先頭の行は検出できないので最後に追加する
-                        abstract_lines.insert(0, results[abstract_start_line_no-1]['text'].strip())
+                        in_abstract = True
+                        abstract_lines.append(results[i-1]['text'].strip())  # Abstractの先頭の行は検出できないので追加する
+                    elif in_abstract and (r['height'] < target_height - 1 or r['height'] > target_height + 1 or \
+                            r['upper_space'] < target_space - 1 or r['upper_space'] > target_space + 1):
+                        in_abstract = False
                         break
+                    if in_abstract:
+                        abstract_lines.append(r['text'].strip())
 
             if abstract_lines:
                 abstract = self.build_abstract_sentences(abstract_lines)
