@@ -108,7 +108,6 @@ class PaperMetaInfo(object):
                 interpreter.process_page(page)
                 layout = device.get_result()
                 results = []
-                # print('objs-------------------------')
                 self.__get_objs(layout, results)
 
                 last_bbox = None
@@ -153,7 +152,6 @@ class PaperMetaInfo(object):
             if title_candidates[pos]['height'] == max_height:
                 title_lines.append(title_candidates[pos]['text'])
         title = ' '.join(title_lines)
-        # print(title)
 
         # 抽出したタイトル行の前後に連結する情報があるかをチェック
         start_line = [i for i, r in enumerate(results) if r['text'] == title_lines[0]][0]
@@ -190,7 +188,6 @@ class PaperMetaInfo(object):
                 abstract_lines.append(r['text'])
 
         abstract = self.build_abstract_sentences(abstract_lines)
-        # print(abstract)
 
         if abstract == '':
             # 例外パターン1: 縦のabstract文字列を探す
@@ -271,11 +268,3 @@ class PaperMetaInfo(object):
                 abstract = self.build_abstract_sentences(abstract_lines)
 
         return title, abstract
-
-
-if __name__ == "__main__":
-    pdf_file = "sample.pdf"
-    extractor = PaperMetaInfo()
-    title, abstract = extractor.get_title_and_abstract(pdf_file)
-    print('Title=', title)
-    print('Abstract=', abstract)
