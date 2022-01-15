@@ -65,7 +65,7 @@ class PaperMetaInfo(object):
     def find_vertical_abstract(self, results, cur_line_no):
         if cur_line_no < 8:
             return False
-        concat_word = ''.join([r['text'].strip() for r in results[cur_line_no-8+1:cur_line_no+1]]).lower()
+        concat_word = ''.join([r['text'] for r in results[cur_line_no-8+1:cur_line_no+1]]).lower()
         if concat_word == "abstract":
             return True
         return False
@@ -73,8 +73,8 @@ class PaperMetaInfo(object):
     def find_2column_abstract(self, results, cur_line_no):
         if cur_line_no < 3:
             return False
-        concat_word3 = ''.join([r['text'].strip() for r in results[cur_line_no-3+1:cur_line_no+1]]).lower()
-        concat_word2 = ''.join([r['text'].strip() for r in results[cur_line_no-2+1:cur_line_no+1]]).lower()
+        concat_word3 = ''.join([r['text'] for r in results[cur_line_no-3+1:cur_line_no+1]]).lower()
+        concat_word2 = ''.join([r['text'] for r in results[cur_line_no-2+1:cur_line_no+1]]).lower()
         if concat_word3 == 'abstract1introduction' or concat_word2 == 'abstract1. introduction':
             return True
         return False
@@ -111,6 +111,7 @@ class PaperMetaInfo(object):
                 last_bbox = None
                 for r in results:
                     box = r['bbox']  # x0, y0, x1, y1
+                    r['text'] = r['text'].rstrip()
                     r['height'] = round(box[3] - box[1], 3)  # 小数第3位で丸める
                     r['width'] = round(box[2] - box[0], 3)
                     if r['height'] == 0.0:
@@ -123,7 +124,7 @@ class PaperMetaInfo(object):
                         r['upper_space'] = -1
                     last_bbox = box
                     if self.debug:
-                        print(r['height'], r['width'], r['aspect'], r['upper_space'], '"' + r['text'].rstrip() + '"')
+                        print(r['height'], r['width'], r['aspect'], r['upper_space'], '"' + r['text'] + '"')
                 # 1ページ目のみ
                 break
         return results
@@ -144,36 +145,36 @@ class PaperMetaInfo(object):
         title_candidates = [r for r in title_candidates if not self.find_author_like_word(r['text'])]
 
         # 特定文字列を除外
-        title_candidates = [r for r in title_candidates if r['text'].strip() not in EXCLUDE_WORDS]
+        title_candidates = [r for r in title_candidates if r['text'] not in EXCLUDE_WORDS]
 
         max_pos = np.argmax([r['height'] for r in title_candidates])
         max_height = title_candidates[max_pos]['height']
-        title_lines = [title_candidates[max_pos]['text'].strip()]
+        title_lines = [title_candidates[max_pos]['text']]
         for pos in range(max_pos+1, min(max_pos+TITLE_MAX_LINES+1, len(title_candidates))):
             if title_candidates[pos]['height'] == max_height:
-                title_lines.append(title_candidates[pos]['text'].strip())
+                title_lines.append(title_candidates[pos]['text'])
         title = ' '.join(title_lines)
         # print(title)
 
         # 抽出したタイトル行の前後に連結する情報があるかをチェック
-        start_line = [i for i, r in enumerate(results) if r['text'].strip() == title_lines[0]][0]
-        end_line = [i for i, r in enumerate(results) if r['text'].strip() == title_lines[-1]][0]
+        start_line = [i for i, r in enumerate(results) if r['text'] == title_lines[0]][0]
+        end_line = [i for i, r in enumerate(results) if r['text'] == title_lines[-1]][0]
         if (title[-1] in ("-", ":")) and (end_line < len(results) - 1):
             # 直後をサーチする
             r = results[end_line+1]
             if r['upper_space'] < TITLE_CONNECTING_SPACE and r['upper_space'] > 0:
-                title = title + " " + r['text'].strip()
+                title = title + " " + r['text']
         elif (title[-1] in ("∗")) and max_pos > 0:  # *ではない
             # 直前をサーチする
             r = results[start_line]
             if r['upper_space'] < TITLE_CONNECTING_SPACE and r['upper_space'] > 0:
-                title = title_candidates[max_pos-1]['text'].strip() + " " + title
+                title = title_candidates[max_pos-1]['text'] + " " + title
         elif end_line < len(results) - 1:
             # 直後をサーチする
             r = results[end_line+1]
             if r['upper_space'] < TITLE_CONNECTING_SPACE and r['upper_space'] > 0:
                 if not any([char for char in r['text'] if char in [',', '*', '.', '†', '‡', '♭']]):  # Author行っぽくないなら
-                    title = title + " " + r['text'].strip()
+                    title = title + " " + r['text']
                     title = title.rstrip()
 
         # Abstract
@@ -187,7 +188,7 @@ class PaperMetaInfo(object):
                 # 1章まで
                 if self.find_introduction_line(r['text'], r['width']):
                     break
-                abstract_lines.append(r['text'].strip())
+                abstract_lines.append(r['text'])
 
         abstract = self.build_abstract_sentences(abstract_lines)
         # print(abstract)
@@ -207,7 +208,7 @@ class PaperMetaInfo(object):
                     if (r['text'].startswith('1') or r['text'].startswith('Introduction') or r['text'].startswith('I. ')) \
                             and (r['width'] < INTRODUCTION_MAX_WIDTH):
                         break
-                    abstract_lines.append(r['text'].strip())
+                    abstract_lines.append(r['text'])
 
             if abstract_lines:
                 abstract = self.build_abstract_sentences(abstract_lines)
@@ -222,7 +223,7 @@ class PaperMetaInfo(object):
                 elif in_abstract:
                     if r['upper_space'] < -100:
                         break
-                    abstract_lines.append(r['text'].strip())
+                    abstract_lines.append(r['text'])
 
             if abstract_lines:
                 abstract = self.build_abstract_sentences(abstract_lines)
@@ -236,7 +237,7 @@ class PaperMetaInfo(object):
 
             # Title行を探す
             for i, r in enumerate(results):
-                if r['text'].strip() == title_lines[0]:
+                if r['text'] == title_lines[0]:
                     title_line_no = i
                     break
 
@@ -258,13 +259,13 @@ class PaperMetaInfo(object):
                     if (not in_abstract) and (r['height'] == target_height) and (r['upper_space'] == target_space):
                         # ターゲットとなるheightとupper_spaceをもつ行をAbstractの行とみなす
                         in_abstract = True
-                        abstract_lines.append(results[i-1]['text'].strip())  # Abstractの先頭の行は検出できないので追加する
+                        abstract_lines.append(results[i-1]['text'])  # Abstractの先頭の行は検出できないので追加する
                     elif in_abstract and (r['height'] < target_height - 1 or r['height'] > target_height + 1 or \
                             r['upper_space'] < target_space - 1 or r['upper_space'] > target_space + 1):
                         in_abstract = False
                         break
                     if in_abstract:
-                        abstract_lines.append(r['text'].strip())
+                        abstract_lines.append(r['text'])
 
             if abstract_lines:
                 abstract = self.build_abstract_sentences(abstract_lines)
