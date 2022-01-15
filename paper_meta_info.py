@@ -88,7 +88,7 @@ class PaperMetaInfo(object):
         abstract = abstract.lstrip("\u2014").lstrip(":").lstrip("-").lstrip(".").lstrip()
         return abstract
 
-    def get_title_and_abstract(self, filepath):
+    def parse_pdf(self, filepath):
         with open(filepath, "rb") as f:
             parser = PDFParser(f)
             document = PDFDocument(parser)
@@ -126,6 +126,10 @@ class PaperMetaInfo(object):
                         print(r['height'], r['width'], r['aspect'], r['upper_space'], '"' + r['text'].rstrip() + '"')
                 # 1ページ目のみ
                 break
+        return results
+
+    def get_title_and_abstract(self, filepath):
+        results = self.parse_pdf(filepath)
 
         # Title
         title_candidates = [r for r in results if r['width'] > self.min_width]
