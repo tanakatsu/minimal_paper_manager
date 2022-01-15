@@ -14,13 +14,13 @@ from pdfminer.layout import (
     LTTextLine,
 )
 
-MIN_WIDTH = 30
+MIN_WIDTH = 30  # 有効行と見なす幅
 TITLE_MAX_LINES = 3  # 最大3行分
 TITLE_BOTTOM_RATIO = 0.5  # topから50%以内
-TITLE_CONNECTING_SPACE = 6.0
-INTRODUCTION_MAX_WIDTH = 120
-COLUMN_CHANGE_UPPER_SPACE = -100
-IMPLICIT_ABSTRACT_TARGET_MARGIN = 1.0
+TITLE_CONNECTING_SPACE = 6.0  # 連結すべきタイトル行のマージン量
+INTRODUCTION_MAX_WIDTH = 120  # Introductionとしての最大幅
+COLUMN_CHANGE_UPPER_SPACE = -100  # カラム変化の閾値
+IMPLICIT_ABSTRACT_TARGET_MARGIN = 1.0  # 連結すべきAbstract行のマージン量
 
 
 SKIP_CHARACTERS = ['.', '†', '‡', '♭']  # Titleで使わない文字
@@ -66,7 +66,7 @@ class PaperMetaInfo(object):
             return False
 
     def find_vertical_abstract(self, results, cur_line_no):
-        if cur_line_no < 8:
+        if cur_line_no < 8:  # 判定に8行を必要とする
             return False
         concat_word = ''.join([r['text'] for r in results[cur_line_no-8+1:cur_line_no+1]]).lower()
         if concat_word == "abstract":
@@ -74,7 +74,7 @@ class PaperMetaInfo(object):
         return False
 
     def find_2column_abstract(self, results, cur_line_no):
-        if cur_line_no < 3:
+        if cur_line_no < 3:  # 判定に最大3行を必要とする
             return False
         concat_word3 = ''.join([r['text'] for r in results[cur_line_no-3+1:cur_line_no+1]]).lower()
         concat_word2 = ''.join([r['text'] for r in results[cur_line_no-2+1:cur_line_no+1]]).lower()
@@ -259,9 +259,9 @@ class PaperMetaInfo(object):
                     if (not in_abstract) and (r['height'] == target_height) and (r['upper_space'] == target_space):
                         # ターゲットとなるheightとupper_spaceをもつ行をAbstractの行とみなす
                         in_abstract = True
-                        abstract_lines.append(results[i-1]['text'])  # Abstractの先頭の行は検出できないので追加する
+                        abstract_lines.append(results[i-1]['text'])  # Abstractの先頭の行は検出困難なので2行目を検出したときに追加する
                     elif in_abstract and (r['height'] < target_height - margin or r['height'] > target_height + margin or \
-                            r['upper_space'] < target_space - margin or r['upper_space'] > target_space + margin):
+                            r['upper_space'] < target_space - margin or r['upper_space'] > target_space + margin):  # 次の行以降はマージンを許容する（完全一致しない場合もあるため）
                         in_abstract = False
                         break
                     if in_abstract:
@@ -279,4 +279,3 @@ if __name__ == "__main__":
     title, abstract = extractor.get_title_and_abstract(pdf_file)
     print('Title=', title)
     print('Abstract=', abstract)
-
