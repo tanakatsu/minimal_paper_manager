@@ -26,8 +26,20 @@ def check_newfiles(df_in, df_out):
     df_new = df_out[~df_out["filename"].isin(df_in["filename"].values)]
     if len(df_new):
         print(f"Found {len(df_new)} new files in target directory.")
-        for items in df_new.itertuples():
-            print(f"  [New] {items.filepath}")
+        for row in df_new.itertuples():
+            print(f"  [New] {row.filepath}")
+
+
+def check_duplication(df):
+    srs = df["filename"].value_counts()
+    srs = srs[srs >= 2]  # 重複ファイル名を抽出
+    if len(srs):
+        print(f"Found {len(srs)} duplicated papers.")
+        for index, _val in srs.iteritems():
+            print(f"  [Duplicated] {index}")
+            df_dup = df[df["filename"] == index]
+            for row in df_dup.itertuples():
+                print(f"    {row.filepath}")
 
 
 def main():
@@ -75,6 +87,9 @@ def main():
 
     # 新規追加ファイルのチェック
     check_newfiles(df, df_out)
+
+    # 重複タイトルのチェック
+    check_duplication(df_out)
 
     print("Finished.")
 
