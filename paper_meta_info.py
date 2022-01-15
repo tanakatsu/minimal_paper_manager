@@ -114,17 +114,13 @@ class PaperMetaInfo(object):
                     r['text'] = r['text'].rstrip()
                     r['height'] = round(box[3] - box[1], 3)  # 小数第3位で丸める
                     r['width'] = round(box[2] - box[0], 3)
-                    if r['height'] == 0.0:
-                        r['aspect'] = 0.0
-                    else:
-                        r['aspect'] = r['width'] / r['height']
                     if last_bbox:
                         r['upper_space'] = round(last_bbox[1] - box[3], 2)
                     else:
                         r['upper_space'] = -1
                     last_bbox = box
                     if self.debug:
-                        print(r['height'], r['width'], r['aspect'], r['upper_space'], '"' + r['text'] + '"')
+                        print(r['height'], r['width'], r['upper_space'], '"' + r['text'] + '"')
                 # 1ページ目のみ
                 break
         return results
