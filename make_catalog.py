@@ -14,12 +14,20 @@ def remove_missing_files(df, keep=False):
     if len(df_missing):
         print(f"Found {len(df_missing)} missing files in catalog.")
         for items in df_missing.itertuples():
-            print(f"  missing: {items.filepath}")
+            print(f"  [missing] {items.filepath}")
         if not keep:
             print("  Removed from catalog")
     if keep:
         return df
     return df[~missing]
+
+
+def check_newfiles(df_in, df_out):
+    df_new = df_out[~df_out["filename"].isin(df_in["filename"].values)]
+    if len(df_new):
+        print(f"Found {len(df_new)} new files in target directory.")
+        for items in df_new.itertuples():
+            print(f"  [New] {items.filepath}")
 
 
 def main():
@@ -64,6 +72,10 @@ def main():
 
     df_out = pd.DataFrame(file_list, columns=COLUMNS)
     df_out.to_csv(catalog_file, index=False)
+
+    # 新規追加ファイルのチェック
+    check_newfiles(df, df_out)
+
     print("Finished.")
 
 if __name__ == "__main__":
