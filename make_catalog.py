@@ -47,6 +47,7 @@ def main():
     parser.add_argument('-f', '--file', type=str, default="catalog.csv")
     parser.add_argument('--keep_missing', action="store_true", help='Do not remove missing entries from catalog')
     parser.add_argument('--dryrun', action='store_true', help='Just checking. Do not save catalog file')
+    parser.add_argument('--update', action='store_true', help='Re-extract title and abstract')
     parser.add_argument('document_root_dir', type=str, help='document root directory')
     args = parser.parse_args()
 
@@ -74,7 +75,7 @@ def main():
     for fileinfo in tqdm(file_list):
         print(fileinfo['filepath'])
         df_matched = df[df['filepath'] == fileinfo['filepath']]
-        if len(df_matched):
+        if len(df_matched) and not args.update:
             # カタログ上のデータを再利用する
             fileinfo["title"] = df_matched.iloc[0]['title']
             fileinfo["abstract"] = df_matched.iloc[0]['abstract']
@@ -82,6 +83,8 @@ def main():
             title, abstract = extractor.get_title_and_abstract(fileinfo['filepath'])
             fileinfo["title"] = title
             fileinfo["abstract"] = abstract
+            if len(df_matched) and args.update:
+                print("Updated")
 
     df_out = pd.DataFrame(file_list, columns=COLUMNS)
 
