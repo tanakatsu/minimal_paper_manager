@@ -19,6 +19,9 @@ TITLE_MAX_LINES = 3  # 最大3行分
 TITLE_BOTTOM_RATIO = 0.5  # topから50%以内
 TITLE_CONNECTING_SPACE = 6.0
 INTRODUCTION_MAX_WIDTH = 120
+COLUMN_CHANGE_UPPER_SPACE = -100
+IMPLICIT_ABSTRACT_TARGET_MARGIN = 1.0
+
 
 SKIP_CHARACTERS = ['.', '†', '‡', '♭']  # Titleで使わない文字
 EXCLUDE_WORDS = ['Energy   and   Buildings', 'sensors']  # 論文誌の名前など除外対象のワード
@@ -217,7 +220,7 @@ class PaperMetaInfo(object):
                 if not in_abstract and self.find_2column_abstract(results, i):
                     in_abstract = True
                 elif in_abstract:
-                    if r['upper_space'] < -100:
+                    if r['upper_space'] < COLUMN_CHANGE_UPPER_SPACE:
                         break
                     abstract_lines.append(r['text'])
 
@@ -249,6 +252,7 @@ class PaperMetaInfo(object):
                 # Abstractっぽいheightを探す
                 heights_and_spaces = [(r['height'], r['upper_space']) for r in results[title_line_no+1:intro_line_no-1] if r['width'] > MIN_WIDTH]
                 target_height, target_space = Counter(heights_and_spaces).most_common()[0][0]
+                margin = IMPLICIT_ABSTRACT_TARGET_MARGIN
                 for i, r in enumerate(results):
                     if i < title_line_no:
                         continue
@@ -256,8 +260,8 @@ class PaperMetaInfo(object):
                         # ターゲットとなるheightとupper_spaceをもつ行をAbstractの行とみなす
                         in_abstract = True
                         abstract_lines.append(results[i-1]['text'])  # Abstractの先頭の行は検出できないので追加する
-                    elif in_abstract and (r['height'] < target_height - 1 or r['height'] > target_height + 1 or \
-                            r['upper_space'] < target_space - 1 or r['upper_space'] > target_space + 1):
+                    elif in_abstract and (r['height'] < target_height - margin or r['height'] > target_height + margin or \
+                            r['upper_space'] < target_space - margin or r['upper_space'] > target_space + margin):
                         in_abstract = False
                         break
                     if in_abstract:
