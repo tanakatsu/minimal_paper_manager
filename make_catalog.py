@@ -58,7 +58,8 @@ def main():
         df = pd.DataFrame(columns=COLUMNS)
 
     # 削除されたレコードの検出
-    df = remove_missing_files(df, keep=args.keep_missing)
+    if len(df):
+        df = remove_missing_files(df, keep=args.keep_missing)
 
     file_list = []
     root_dir = os.path.realpath(args.document_root_dir)
