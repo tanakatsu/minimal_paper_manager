@@ -45,7 +45,8 @@ def check_duplication(df):
 def main():
     parser = ArgumentParser()
     parser.add_argument('-f', '--file', type=str, default="catalog.csv")
-    parser.add_argument('--keep_missing', action="store_true")
+    parser.add_argument('--keep_missing', action="store_true", help='Do not remove missing entries from catalog')
+    parser.add_argument('--dryrun', action='store_true', help='Just checking. Do not save catalog file')
     parser.add_argument('document_root_dir', type=str, help='document root directory')
     args = parser.parse_args()
 
@@ -83,7 +84,6 @@ def main():
             fileinfo["abstract"] = abstract
 
     df_out = pd.DataFrame(file_list, columns=COLUMNS)
-    df_out.to_csv(catalog_file, index=False)
 
     # 新規追加ファイルのチェック
     check_newfiles(df, df_out)
@@ -91,7 +91,11 @@ def main():
     # 重複タイトルのチェック
     check_duplication(df_out)
 
-    print("Finished.")
+    if args.dryrun:
+        print("Finished without saving.")
+    else:
+        df_out.to_csv(catalog_file, index=False)
+        print("Finished.")
 
 if __name__ == "__main__":
     main()
