@@ -44,8 +44,8 @@ def check_duplication(df):
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('-f', '--file', type=str, default="catalog.csv")
-    parser.add_argument('--keep_missing', action="store_true", help='Do not remove missing entries from catalog')
+    parser.add_argument('-f', '--file', type=str, default="catalog.csv", help='catalog filename')
+    parser.add_argument('--keep_missing', action="store_true", help='Keep missing entries from catalog')
     parser.add_argument('--dryrun', action='store_true', help='Just checking. Do not save catalog file')
     parser.add_argument('--update', action='store_true', help='Re-extract title and abstract')
     parser.add_argument('document_root_dir', type=str, help='document root directory')
