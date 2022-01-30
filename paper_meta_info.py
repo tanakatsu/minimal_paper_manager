@@ -18,6 +18,7 @@ MIN_WIDTH = 30  # 有効行と見なす幅
 TITLE_MAX_LINES = 3  # 最大3行分
 TITLE_BOTTOM_RATIO = 0.5  # topから50%以内
 TITLE_CONNECTING_SPACE = 6.0  # 連結すべきタイトル行のマージン量
+TITLE_MIN_LENGTH = 100   # width100以上
 INTRODUCTION_MAX_WIDTH = 120  # Introductionとしての最大幅
 COLUMN_CHANGE_UPPER_SPACE = -100  # カラム変化の閾値
 IMPLICIT_ABSTRACT_TARGET_MARGIN = 1.0  # 連結すべきAbstract行のマージン量
@@ -57,6 +58,11 @@ class PaperMetaInfo(object):
         chk1 = re.search(r'[A-Z]{1}[a-z]+[12][,\s]', word)
         chk2 = re.search(r'[A-Z]{1}[a-z]+,\*{1,2}', word)
         return (chk1 is not None) or (chk2 is not None)
+
+    def find_organization_like_word(self, word):
+        if word.startswith("†") or word.startswith("?"):
+            return True
+        return False
 
     def find_introduction_line(self, text, width):
         if (text.startswith('1') or text.startswith('1 Introduction') or text.startswith('1. Introduction') or \
@@ -142,12 +148,15 @@ class PaperMetaInfo(object):
         # 著者情報っぽい行は除外
         title_candidates = [r for r in title_candidates if not self.find_author_like_word(r['text'])]
 
+        # 所属機関っぽい行は除外
+        title_candidates = [r for r in title_candidates if not self.find_organization_like_word(r['text'])]
+
         # 特定文字列を除外
         title_candidates = [r for r in title_candidates if r['text'] not in EXCLUDE_WORDS]
 
-        max_pos = np.argmax([r['height'] for r in title_candidates])
+        max_pos = np.argmax([r['height'] for r in title_candidates if r['width'] >= TITLE_MIN_LENGTH])
         max_height = title_candidates[max_pos]['height']
-        title_lines = [title_candidates[max_pos]['text']]
+        title_lines = [title_candidates[max_pos]['text']]  # 抽出行をリストに入れておく
         for pos in range(max_pos+1, min(max_pos+TITLE_MAX_LINES+1, len(title_candidates))):
             if title_candidates[pos]['height'] == max_height:
                 title_lines.append(title_candidates[pos]['text'])
