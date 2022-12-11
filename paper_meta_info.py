@@ -64,7 +64,17 @@ class PaperMetaInfo(object):
             return True
         return False
 
-    def find_introduction_line(self, text, width):
+    def find_introduction_line(self, parse_results):
+        line = -1
+        for i, r in enumerate(parse_results):
+            txt = r['text']
+            width = r['width']
+            if self.check_introduction_line(txt, width):
+                line = i
+                break
+        return line
+
+    def check_introduction_line(self, text, width):
         if (text.startswith('1') or text.startswith('1 Introduction') or text.startswith('1. Introduction') or \
                 text.startswith('Introduction') or text.startswith('I. ')) and width < INTRODUCTION_MAX_WIDTH:
             return True
@@ -139,7 +149,13 @@ class PaperMetaInfo(object):
         # Title
         title_candidates = [r for r in results if r['width'] > self.min_width]
         abst_line_no = self.find_abstract_line(title_candidates)  # Abstractの行をサーチ
-        max_line_no = abst_line_no if abst_line_no >= 0 else int(len(title_candidates) * TITLE_BOTTOM_RATIO)
+        intro_line_no = self.find_introduction_line(title_candidates)  # Introductionの行をサーチ
+        if abst_line_no >= 0:
+            max_line_no = abst_line_no
+        elif intro_line_no >= 0:
+            max_line_no = intro_line_no
+        else:
+            max_line_no = int(len(title_candidates) * TITLE_BOTTOM_RATIO)
         title_candidates = [r for i, r in enumerate(title_candidates) if i < max_line_no]
 
         # 著者情報で含む文字がある場合は除外
@@ -154,8 +170,12 @@ class PaperMetaInfo(object):
         # 特定文字列を除外
         title_candidates = [r for r in title_candidates if r['text'] not in EXCLUDE_WORDS]
 
-        max_pos = np.argmax([r['height'] for r in title_candidates if r['width'] >= TITLE_MIN_LENGTH])
-        max_height = title_candidates[max_pos]['height']
+        # 最も大きい高さを探す
+        tmp_title_candidates = [r for r in title_candidates if r['width'] >= TITLE_MIN_LENGTH]
+        tmp_max_pos = np.argmax([r['height'] for r in tmp_title_candidates])
+        max_height = tmp_title_candidates[tmp_max_pos]['height']
+
+        max_pos = [r['height'] for r in title_candidates].index(max_height)
         title_lines = [title_candidates[max_pos]['text']]  # 抽出行をリストに入れておく
         for pos in range(max_pos+1, min(max_pos+TITLE_MAX_LINES+1, len(title_candidates))):
             if title_candidates[pos]['height'] == max_height:
@@ -192,7 +212,7 @@ class PaperMetaInfo(object):
 
             if in_abstract:
                 # 1章まで
-                if self.find_introduction_line(r['text'], r['width']):
+                if self.check_introduction_line(r['text'], r['width']):
                     break
                 abstract_lines.append(r['text'])
 
@@ -250,7 +270,7 @@ class PaperMetaInfo(object):
             for i, r in enumerate(results):
                 if i < title_line_no:
                     continue
-                if self.find_introduction_line(r['text'], r['width']) and r['width'] > MIN_WIDTH:
+                if self.check_introduction_line(r['text'], r['width']) and r['width'] > MIN_WIDTH:
                     intro_line_no = i
                     break
 
